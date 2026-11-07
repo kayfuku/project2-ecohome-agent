@@ -25,7 +25,12 @@ ecohome_starter/
 ├── data/
 │   └── documents/
 │       ├── tip_device_best_practices.txt
-│       └── tip_energy_savings.txt
+│       ├── tip_energy_savings.txt
+│       ├── tip_hvac_optimization.txt
+│       ├── tip_smart_home_automation.txt
+│       ├── tip_renewable_energy_integration.txt
+│       ├── tip_seasonal_energy_management.txt
+│       └── tip_energy_storage_optimization.txt
 ├── agent.py                   # Energy Advisor エージェント本体
 ├── tools.py                   # エージェントのツール（天気、料金、データベース、RAG）
 ├── requirements.txt           # Python の依存パッケージ

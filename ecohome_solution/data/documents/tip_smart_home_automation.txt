@@ -1,0 +1,28 @@
+Smart home automation lets your devices respond to schedules, occupancy, electricity prices and weather without manual effort. Well-designed automations can cut household energy use by 10-20% while making the home more comfortable and convenient.
+
+Smart Thermostats:
+- Enable geofencing so the thermostat switches to away mode when everyone leaves
+- Use learning or adaptive schedules that adjust to your daily routine
+- Connect the thermostat to your utility's demand response program for bill credits
+- Review monthly energy reports to spot unusual HVAC runtime
+
+Smart Plugs and Power Strips:
+- Put entertainment centers, game consoles and office equipment on smart plugs to cut standby power
+- Schedule plugs to turn off overnight and while you are at work
+- Use energy-monitoring plugs to identify devices with high phantom load
+
+Lighting Automation:
+- Install occupancy or vacancy sensors in bathrooms, closets, garages and hallways
+- Use daylight sensors to dim lights when natural light is sufficient
+- Create "away" and "goodnight" scenes that turn off all lights with one command
+
+Price and Solar-Aware Automations:
+- Trigger dishwashers, washing machines and EV chargers when electricity prices drop
+- Run flexible loads when solar generation exceeds household consumption
+- Receive alerts when peak pricing periods are about to begin
+
+Best Practices:
+- Start with a few high-impact automations and expand gradually
+- Use a central hub or app so devices from different brands work together
+- Keep firmware updated for security and efficiency improvements
+- Add manual overrides so automations never compromise comfort or safety

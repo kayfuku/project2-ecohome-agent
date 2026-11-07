@@ -9,7 +9,7 @@ load_dotenv()
 
 
 class Agent:
-    def __init__(self, instructions:str, model:str="gpt-4o-mini"):
+    def __init__(self, instructions: str, model: str = "gpt-5.4-mini"):
 
         # Initialize the LLM
         llm = ChatOpenAI(
@@ -27,18 +27,18 @@ class Agent:
             tools=TOOL_KIT,
         )
 
-    def invoke(self, question: str, context:str=None) -> str:
+    def invoke(self, question: str, context: str = None) -> str:
         """
         Ask the Energy Advisor a question about energy optimization.
-        
+
         Args:
             question (str): The user's question about energy optimization
             location (str): Location for weather and pricing data
-        
+
         Returns:
             str: The advisor's response with recommendations
         """
-        
+
         messages = []
         if context:
             # Add some context to the question as a system message
@@ -49,14 +49,14 @@ class Agent:
         messages.append(
             ("user", question)
         )
-        
+
         # Get response from the agent
         response = self.graph.invoke(
-            input= {
+            input={
                 "messages": messages
             }
         )
-        
+
         return response
 
     def get_agent_tools(self):

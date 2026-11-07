@@ -1,0 +1,28 @@
+Integrating renewable energy such as rooftop solar into your home works best when household consumption is shifted to match generation. Using solar power directly in the home is usually more valuable than exporting it to the grid, especially where export credits are lower than retail electricity prices.
+
+Understanding Solar Generation:
+- Solar output typically peaks between 10 AM and 3 PM
+- Generation is highest on clear summer days and lower in winter or on cloudy days
+- Check your inverter app or monitoring dashboard to learn your daily production curve
+- Use weather forecasts to anticipate high and low generation days
+
+Maximizing Self-Consumption:
+- Run dishwashers, washing machines and dryers during midday solar peaks
+- Charge electric vehicles during the day when parked at home with high solar output
+- Pre-cool or pre-heat the home using surplus solar power
+- Heat water during solar hours using a heat pump water heater or timer
+
+Panel Maintenance:
+- Keep panels free of dust, leaves, pollen and snow to maintain output
+- Trim trees that cast shade on panels as they grow
+- Compare actual production to expected output monthly to detect faults early
+- Schedule a professional inspection every few years
+
+Grid Interaction:
+- Understand your net metering or feed-in tariff rules before deciding when to export
+- Avoid heavy grid consumption during evening peak hours after solar output drops
+- Combine solar with battery storage to cover evening demand
+
+Other Renewable Options:
+- Consider community solar if your roof is unsuitable for panels
+- Choose a green electricity plan from your utility to cover remaining grid usage

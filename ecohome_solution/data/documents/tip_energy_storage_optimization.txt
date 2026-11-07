@@ -1,0 +1,28 @@
+Home battery storage lets you save electricity when it is cheap or abundant and use it when it is expensive. When paired with solar panels and time-of-use pricing, a well-managed battery can significantly reduce electricity bills and provide backup power during outages.
+
+Charging Strategies:
+- Charge the battery from surplus solar generation during midday hours
+- If you have no solar, charge from the grid during off-peak hours (typically 11 PM to 6 AM)
+- Avoid charging from the grid during peak pricing periods
+- Use weather forecasts to decide whether to top up from the grid before a cloudy day
+
+Discharging Strategies:
+- Discharge during evening peak pricing hours (often 4 PM to 9 PM) to avoid expensive grid power
+- Prioritize powering the home over exporting to the grid when export credits are low
+- Enable time-of-use or "cost savings" mode in your battery app
+
+Battery Health:
+- Keep a reserve of 10-20% charge to protect battery life and provide backup power
+- Avoid frequent full discharges when possible
+- Install the battery in a location with moderate temperatures, as extreme heat or cold reduces performance
+- Keep battery firmware up to date for improved control algorithms
+
+Backup Power Planning:
+- Increase the backup reserve before storms or forecasted grid outages
+- Identify essential loads such as refrigerators, lighting and internet to run during outages
+- Avoid running high-power appliances like dryers and ovens from battery during an outage
+
+Combining with Other Devices:
+- Coordinate battery discharge with EV charging so both do not draw from the grid at peak times
+- Consider an EV with bidirectional charging as additional home storage
+- Participate in utility virtual power plant programs to earn credits for sharing stored energy
