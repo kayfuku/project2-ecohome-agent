@@ -44,6 +44,7 @@ class Agent:
             ValueError: If `instructions` is empty
             EnvironmentError: If the VOCAREUM_API_KEY environment variable is not set
         """
+        # Fail fast on bad configuration, before any client is created.
         if not instructions or not instructions.strip():
             raise ValueError("`instructions` must be a non-empty string.")
 
@@ -55,7 +56,9 @@ class Agent:
 
         self.recursion_limit = recursion_limit
 
-        # Initialize the LLM
+        # Initialize the LLM.
+        # Transient errors are retried by the client itself (`max_retries`);
+        # only errors that persist after retries reach `invoke()`'s handlers.
         llm = ChatOpenAI(
             model=model,
             temperature=0.0,
@@ -91,6 +94,7 @@ class Agent:
             ValueError: If `question` is empty
             AgentError: If the LLM call or the agent run fails
         """
+        # Reject empty input before spending an LLM call.
         if not question or not question.strip():
             raise ValueError("`question` must be a non-empty string.")
 
@@ -101,12 +105,18 @@ class Agent:
 
         messages.append(("user", question))
 
-        # Get response from the agent
+        # Get response from the agent.
+        # Every failure is logged and re-raised as AgentError (with the original
+        # exception chained via `from e`), so callers only need to catch one type.
+        # Handlers go from most to least specific: RateLimitError and
+        # AuthenticationError subclass APIStatusError, and APITimeoutError
+        # subclasses APIConnectionError, so their order matters.
         try:
             response = self.graph.invoke(
                 input={"messages": messages},
                 config={"recursion_limit": self.recursion_limit},
             )
+        # The agent kept calling tools without reaching a final answer.
         except GraphRecursionError as e:
             logger.error("Agent exceeded recursion limit (%d)",
                          self.recursion_limit)
@@ -115,32 +125,40 @@ class Agent:
                 "(possible tool-calling loop). Try a simpler question or raise "
                 "`recursion_limit`."
             ) from e
+        # Invalid or missing API key (401). Not retried by the client.
         except openai.AuthenticationError as e:
             logger.error("LLM authentication failed")
             raise AgentError(
                 "Authentication with the LLM API failed. Check VOCAREUM_API_KEY."
             ) from e
+        # Rate limit or quota still exceeded after the client's retries (429).
         except openai.RateLimitError as e:
             logger.error("LLM rate limit / quota exceeded")
             raise AgentError(
                 "The LLM API rate limit or quota was exceeded. Wait and try again."
             ) from e
+        # Request exceeded `timeout` on every attempt.
         except openai.APITimeoutError as e:
             logger.error("LLM request timed out")
             raise AgentError("The LLM API request timed out.") from e
+        # Network-level failure (DNS, refused connection, etc.).
         except openai.APIConnectionError as e:
             logger.error("Could not connect to the LLM API")
             raise AgentError("Could not connect to the LLM API.") from e
+        # Any other non-2xx HTTP response (400 bad request, 5xx, etc.).
         except openai.APIStatusError as e:
             logger.error("LLM API returned status %s", e.status_code)
             raise AgentError(
                 f"The LLM API returned an error (HTTP {e.status_code})."
             ) from e
+        # Catch-all for anything else; logs the full traceback for debugging.
         except Exception as e:
             logger.exception("Unexpected error while running the agent")
             raise AgentError(
                 f"Unexpected error while running the agent: {e}") from e
 
+        # Guard against an empty final state so callers can safely read
+        # `response["messages"][-1]`.
         if not response.get("messages"):
             raise AgentError("The agent returned no messages.")
 
