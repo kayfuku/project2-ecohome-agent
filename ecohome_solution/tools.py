@@ -163,7 +163,11 @@ def get_electricity_prices(date: str = None) -> Dict[str, Any]:
     # Seed by date so repeated calls for the same date return the same prices
     rng = random.Random(date)
 
-    # Same rates as cost_usd in 01_db_setup.ipynb (peak 0.15, off-peak 0.10)
+    # Same rates as cost_usd in 01_db_setup.ipynb (peak 0.15, off-peak 0.10), but NOT
+    # the same peak hours: the DB applies the peak rate only in device-specific hours
+    # (EV 18-21, HVAC 12-17, appliance 19-22), while this tool uses 06-22 for every device.
+    # So the DB's average rate (total_cost_usd / total_consumption_kwh) is lower than
+    # this tariff implies.
     base_price = 0.10  # USD per kWh (off-peak)
     peak_multiplier = 1.5  # -> 0.15 USD per kWh during peak
     off_peak_multiplier = 1.0

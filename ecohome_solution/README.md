@@ -22,7 +22,7 @@ EcoHome is a smart-home energy start-up that helps customers with solar panels, 
 - **Historical Analysis**: Queries past energy usage patterns for personalized advice
 - **RAG Pipeline**: Retrieves relevant energy-saving tips and best practices
 - **Multi-device Optimization**: Handles EVs, HVAC, appliances, and solar systems
-- **Cost Calculations**: Provides specific savings estimates and ROI analysis
+- **Cost Calculations**: Provides specific daily, monthly and annual savings estimates for usage reduction and load shifting
 
 ## System Architecture
 
@@ -94,26 +94,29 @@ flowchart LR
 ## Project Structure
 
 ```
-ecohome_starter/
+ecohome_solution/
 ├── models/
 │   ├── __init__.py
 │   └── energy.py              # Database models for energy data
 ├── data/
-│   └── documents/
-│       ├── tip_device_best_practices.txt
-│       ├── tip_energy_savings.txt
-│       ├── tip_hvac_optimization.txt
-│       ├── tip_smart_home_automation.txt
-│       ├── tip_renewable_energy_integration.txt
-│       ├── tip_seasonal_energy_management.txt
-│       └── tip_energy_storage_optimization.txt
+│   ├── documents/
+│   │   ├── tip_device_best_practices.txt
+│   │   ├── tip_energy_savings.txt
+│   │   ├── tip_hvac_optimization.txt
+│   │   ├── tip_smart_home_automation.txt
+│   │   ├── tip_renewable_energy_integration.txt
+│   │   ├── tip_seasonal_energy_management.txt
+│   │   └── tip_energy_storage_optimization.txt
+│   ├── energy_data.db         # SQLite database (created by 01_db_setup.ipynb)
+│   └── vectorstore/           # ChromaDB vector store (created by 02_rag_setup.ipynb)
 ├── agent.py                   # Main Energy Advisor agent
-├── tools.py                   # Agent tools (weather, pricing, database, RAG)
+├── tools.py                   # Agent tools (weather, pricing, database, RAG, savings)
 ├── requirements.txt           # Python dependencies
-├── 01_db_setup.ipynb         # Database setup and sample data
-├── 02_rag_setup.ipynb        # RAG pipeline setup
-├── 03_run_and_evaluate.ipynb # Agent running, testing and evaluation
-└── README.md                  # This file
+├── 01_db_setup.ipynb          # Database setup and sample data
+├── 02_rag_setup.ipynb         # RAG pipeline setup
+├── 03_run_and_evaluate.ipynb  # Agent running, testing and evaluation
+├── README.md                  # This file (English)
+└── README_ja.md               # Japanese version
 ```
 
 ## Setup Instructions
@@ -150,8 +153,9 @@ Execute the notebooks in order:
 - **Electricity Pricing**: Access time-of-day pricing data
 - **Energy Usage Query**: Retrieve historical consumption data
 - **Solar Generation Query**: Get past solar production data
+- **Recent Energy Summary**: Summarize consumption (by device type) and solar generation over the last N hours
 - **Energy Tips Search**: Find relevant energy-saving recommendations
-- **Savings Calculator**: Compute potential cost savings
+- **Savings Calculator**: Compute daily, monthly and annual kWh/USD savings and percentages from **daily** kWh inputs. Supports usage reduction (fewer kWh) and load shifting (same kWh at a cheaper rate via `optimized_price_per_kwh`)
 
 ### Example Questions
 
@@ -166,11 +170,12 @@ The Energy Advisor can answer questions like:
 
 | Tool group                 | Tools (`tools.py`)                                                          | Backend                                                                 |
 | -------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Weather & pricing          | `get_weather_forecast`, `get_electricity_prices`                            | Mock APIs (randomized synthetic data)                                   |
+| Weather & pricing          | `get_weather_forecast`, `get_electricity_prices`                            | Mock APIs (seeded synthetic data: same input returns the same values)   |
 | Usage & generation history | `query_energy_usage`, `query_solar_generation`, `get_recent_energy_summary` | SQLite `data/energy_data.db` (SQLAlchemy / `models/energy.py`)          |
 | Energy tips search         | `search_energy_tips`                                                        | ChromaDB `data/vectorstore/` (similarity search with OpenAI Embeddings) |
 | Savings calculator         | `calculate_energy_savings`                                                  | None (calculation only)                                                 |
 
+- The mock APIs seed their random generator with the date (weather: location + date), so repeated calls for the same date return the same forecast and prices.
 - Both the LLM and the embeddings use the OpenAI-compatible API via Vocareum.
 - ChromaDB stores the chunked and embedded `data/documents/*.txt` files produced by `02_rag_setup.ipynb`.
 
@@ -203,6 +208,11 @@ erDiagram
 
 - The two tables have no foreign-key relationship; each is queried independently by `timestamp`.
 - Tables are defined in `models/energy.py` (SQLAlchemy), and connections are managed by the `DatabaseManager` class.
+- **Peak hours differ between the sample data and the pricing tool.** Both use the same rates (peak $0.15/kWh, off-peak $0.10/kWh), but:
+  - `cost_usd` in `energy_usage` applies the peak rate only during **device-specific** peak hours: EV 18:00-21:00, HVAC 12:00-17:00, appliance 19:00-22:00.
+  - `get_electricity_prices` treats **06:00-22:00** as peak for every device.
+
+  As a result, the average rate derived from the database (`total_cost_usd / total_consumption_kwh`, about $0.11/kWh for the EV) is lower than the tariff alone would suggest. Keep this in mind when comparing historical cost with tariff-based savings estimates.
 
 ### Energy Usage Table
 
@@ -310,7 +320,7 @@ A judge LLM (`gpt-5.4`, a larger model than the agent's) scores four metrics on 
 
 ### 2. Tool Usage Evaluation (Deterministic)
 
-The tools actually called are extracted from the agent's message trace and compared with `expected_tools`. No LLM is involved, so the results are the same on every run.
+The tools actually called are extracted from the agent's message trace and compared with `expected_tools`. No LLM is involved, so the same message trace always gets the same result. The agent's own tool choices can still vary between runs.
 
 | Metric                   | Calculation                                                  | Meaning                          |
 | ------------------------ | ------------------------------------------------------------ | -------------------------------- |

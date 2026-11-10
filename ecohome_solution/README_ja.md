@@ -22,7 +22,7 @@ EcoHome は、ソーラーパネル・電気自動車（EV）・スマートサ�
 - **履歴分析**: 過去のエネルギー使用パターンを照会し、個別のアドバイスを提供
 - **RAG パイプライン**: 関連する省エネのヒントやベストプラクティスを検索
 - **複数機器の最適化**: EV、空調（HVAC）、家電、太陽光発電システムに対応
-- **コスト計算**: 具体的な節約額の見積もりと ROI 分析を提供
+- **コスト計算**: 使用量の削減や時間帯の移動による節約額を、日・月・年単位で具体的に見積もり
 
 ## システム構成図
 
@@ -94,26 +94,29 @@ flowchart LR
 ## プロジェクト構成
 
 ```
-ecohome_starter/
+ecohome_solution/
 ├── models/
 │   ├── __init__.py
 │   └── energy.py              # エネルギーデータ用のデータベースモデル
 ├── data/
-│   └── documents/
-│       ├── tip_device_best_practices.txt
-│       ├── tip_energy_savings.txt
-│       ├── tip_hvac_optimization.txt
-│       ├── tip_smart_home_automation.txt
-│       ├── tip_renewable_energy_integration.txt
-│       ├── tip_seasonal_energy_management.txt
-│       └── tip_energy_storage_optimization.txt
+│   ├── documents/
+│   │   ├── tip_device_best_practices.txt
+│   │   ├── tip_energy_savings.txt
+│   │   ├── tip_hvac_optimization.txt
+│   │   ├── tip_smart_home_automation.txt
+│   │   ├── tip_renewable_energy_integration.txt
+│   │   ├── tip_seasonal_energy_management.txt
+│   │   └── tip_energy_storage_optimization.txt
+│   ├── energy_data.db         # SQLite データベース（01_db_setup.ipynb で作成）
+│   └── vectorstore/           # ChromaDB のベクトルストア（02_rag_setup.ipynb で作成）
 ├── agent.py                   # Energy Advisor エージェント本体
-├── tools.py                   # エージェントのツール（天気、料金、データベース、RAG）
+├── tools.py                   # エージェントのツール（天気、料金、データベース、RAG、節約額計算）
 ├── requirements.txt           # Python の依存パッケージ
-├── 01_db_setup.ipynb         # データベースのセットアップとサンプルデータ
-├── 02_rag_setup.ipynb        # RAG パイプラインのセットアップ
-├── 03_run_and_evaluate.ipynb # エージェントの実行・テスト・評価
-└── README.md                  # このファイル
+├── 01_db_setup.ipynb          # データベースのセットアップとサンプルデータ
+├── 02_rag_setup.ipynb         # RAG パイプラインのセットアップ
+├── 03_run_and_evaluate.ipynb  # エージェントの実行・テスト・評価
+├── README.md                  # 英語版
+└── README_ja.md               # このファイル（日本語版）
 ```
 
 ## セットアップ手順
@@ -150,8 +153,9 @@ VOCAREUM_API_KEY=your_vocareum_api_key_here
 - **電気料金**: 時間帯別の料金データにアクセス
 - **エネルギー使用量の照会**: 過去の消費データを取得
 - **太陽光発電量の照会**: 過去の太陽光発電データを取得
+- **直近の使用サマリー**: 直近 N 時間の消費量（機器の種類別）と太陽光発電量を集計
 - **省エネのヒント検索**: 関連する省エネの提案を検索
-- **節約額計算**: 見込まれるコスト削減額を算出
+- **節約額計算**: **日次**の kWh を入力として、日・月・年単位の kWh／USD の節約額と削減率を算出。使用量の削減（kWh を減らす）と時間帯の移動（同じ kWh を `optimized_price_per_kwh` の安い単価で使う）の両方に対応
 
 ### 質問例
 
@@ -166,11 +170,12 @@ Energy Advisor は次のような質問に答えられます。
 
 | ツール群           | ツール（`tools.py`）                                                        | 接続先                                                          |
 | ------------------ | --------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| 天気・料金         | `get_weather_forecast`, `get_electricity_prices`                            | モック API（乱数ベースの擬似データ）                            |
+| 天気・料金         | `get_weather_forecast`, `get_electricity_prices`                            | モック API（シード固定の擬似データ。同じ入力なら同じ値を返す）  |
 | 使用履歴・発電履歴 | `query_energy_usage`, `query_solar_generation`, `get_recent_energy_summary` | SQLite `data/energy_data.db`（SQLAlchemy / `models/energy.py`） |
 | 省エネのヒント検索 | `search_energy_tips`                                                        | ChromaDB `data/vectorstore/`（OpenAI Embeddings で類似検索）    |
 | 節約額計算         | `calculate_energy_savings`                                                  | なし（計算のみ）                                                |
 
+- モック API は日付（天気は地点＋日付）を乱数のシードにしているため、同じ日付で何度呼び出しても同じ予報・料金を返します。
 - LLM と Embeddings は、どちらも Vocareum 経由の OpenAI 互換 API を利用します。
 - ChromaDB には、`02_rag_setup.ipynb` で `data/documents/*.txt` をチャンク分割・埋め込みしたものが保存されています。
 
@@ -203,6 +208,11 @@ erDiagram
 
 - 2つのテーブルに外部キーによる関連はなく、`timestamp` を軸にそれぞれ独立して照会されます。
 - テーブル定義は `models/energy.py`（SQLAlchemy）、接続管理は `DatabaseManager` クラスが担います。
+- **サンプルデータと料金ツールでは、ピーク時間帯の定義が異なります。** 単価はどちらも同じ（ピーク $0.15/kWh、オフピーク $0.10/kWh）ですが、次の違いがあります。
+  - `energy_usage` の `cost_usd` は、**機器ごと**のピーク時間帯にだけピーク単価を適用します（EV 18:00〜21:00、HVAC 12:00〜17:00、家電 19:00〜22:00）。
+  - `get_electricity_prices` は、すべての機器で **06:00〜22:00** をピークとして扱います。
+
+  そのため、DB から求めた平均単価（`total_cost_usd ÷ total_consumption_kwh`、EV で約 $0.11/kWh）は、料金表から想定される値より低くなります。過去のコストと料金表ベースの節約額の見積もりを比べるときは、この点に注意してください。
 
 ### Energy Usage テーブル
 
@@ -310,12 +320,12 @@ flowchart LR
 
 ### 2. ツール使用評価（決定的な評価）
 
-エージェントのメッセージ履歴から実際に呼ばれたツールを取り出し、`expected_tools` と比較します。LLM を使わないため、結果は毎回同じになります。
+エージェントのメッセージ履歴から実際に呼ばれたツールを取り出し、`expected_tools` と比較します。LLM を使わないため、同じメッセージ履歴なら評価結果は常に同じです。ただし、エージェント自身のツール選択は実行ごとに変わることがあります。
 
 | 指標                     | 計算方法                                                      | 意味                           |
 | ------------------------ | ------------------------------------------------------------- | ------------------------------ |
-| **tool_appropriateness** | 期待ツールに含まれる呼び出し数 ÷ 呼び出したツール数（適合率） | 不要なツールを呼んでいないか   |
-| **tool_completeness**    | 実際に呼ばれた期待ツール数 ÷ 期待ツール数（再現率）           | 必要なツールを漏れなく呼んだか |
+| **tool_appropriateness** | 呼び出したツールのうち期待ツールの種類数 ÷ 呼び出したツールの種類数（適合率） | 不要なツールを呼んでいないか   |
+| **tool_completeness**    | 実際に呼ばれた期待ツールの種類数 ÷ 期待ツールの種類数（再現率）               | 必要なツールを漏れなく呼んだか |
 | **tool_f1**              | 上記2つの調和平均                                             | ツール使用の総合評価           |
 
 - 数はいずれも、重複を除いたツールの種類で数えます。
