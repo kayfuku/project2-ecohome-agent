@@ -420,33 +420,69 @@ def search_energy_tips(query: str, max_results: int = 5) -> Dict[str, Any]:
 
 @tool
 def calculate_energy_savings(device_type: str, current_usage_kwh: float,
-                             optimized_usage_kwh: float, price_per_kwh: float = 0.12) -> Dict[str, Any]:
+                             optimized_usage_kwh: float, price_per_kwh: float = 0.12,
+                             optimized_price_per_kwh: float = None) -> Dict[str, Any]:
     """
-    Calculate potential energy savings from optimization.
+    Calculate energy and cost savings from an optimization. ALWAYS use this tool to
+    produce any savings figure (kWh, $, %, daily/monthly/annual) instead of doing the
+    arithmetic yourself.
+
+    Supports two kinds of optimization (or both at once):
+      - Usage reduction: fewer kWh at the same price
+        (e.g. pool pump 10 -> 6 kWh/day: current=10, optimized=6, price=<rate>).
+      - Load shifting: the same kWh moved to a cheaper time
+        (e.g. EV 30 kWh/day moved from peak to off-peak: current=30, optimized=30,
+        price_per_kwh=<peak rate>, optimized_price_per_kwh=<off-peak rate>).
+
+    All kWh inputs must be DAILY values; monthly (x30) and annual (x365) figures are
+    derived from them. Convert weekly/monthly totals to daily before calling.
 
     Args:
-        device_type (str): Type of device being optimized
-        current_usage_kwh (float): Current energy usage in kWh
-        optimized_usage_kwh (float): Optimized energy usage in kWh
-        price_per_kwh (float): Price per kWh (default 0.12)
+        device_type (str): Type of device being optimized (e.g. "EV", "HVAC", "pool_pump")
+        current_usage_kwh (float): Current daily energy usage in kWh
+        optimized_usage_kwh (float): Daily energy usage in kWh after the optimization
+        price_per_kwh (float): Current price per kWh in USD; pass the real rate from
+            get_electricity_prices (default 0.12)
+        optimized_price_per_kwh (float): Price per kWh after the optimization, for load
+            shifting (e.g. the off-peak rate). Defaults to `price_per_kwh`.
 
     Returns:
-        Dict[str, Any]: Savings calculation results
+        Dict[str, Any]: Daily, monthly and annual kWh and USD savings plus percentages,
+            or {"error": ...} for invalid inputs
     """
+    if current_usage_kwh < 0 or optimized_usage_kwh < 0:
+        return {"error": "Usage values must be non-negative kWh."}
+    if optimized_price_per_kwh is None:
+        optimized_price_per_kwh = price_per_kwh
+    if price_per_kwh < 0 or optimized_price_per_kwh < 0:
+        return {"error": "Prices must be non-negative USD/kWh."}
+
+    current_cost_usd = current_usage_kwh * price_per_kwh
+    optimized_cost_usd = optimized_usage_kwh * optimized_price_per_kwh
+
     savings_kwh = current_usage_kwh - optimized_usage_kwh
-    savings_usd = savings_kwh * price_per_kwh
+    savings_usd = current_cost_usd - optimized_cost_usd
     savings_percentage = (savings_kwh / current_usage_kwh) * \
         100 if current_usage_kwh > 0 else 0
+    cost_savings_percentage = (savings_usd / current_cost_usd) * \
+        100 if current_cost_usd > 0 else 0
 
     return {
         "device_type": device_type,
         "current_usage_kwh": current_usage_kwh,
         "optimized_usage_kwh": optimized_usage_kwh,
+        "price_per_kwh": price_per_kwh,
+        "optimized_price_per_kwh": optimized_price_per_kwh,
+        "current_daily_cost_usd": round(current_cost_usd, 2),
+        "optimized_daily_cost_usd": round(optimized_cost_usd, 2),
         "savings_kwh": round(savings_kwh, 2),
         "savings_usd": round(savings_usd, 2),
         "savings_percentage": round(savings_percentage, 1),
-        "price_per_kwh": price_per_kwh,
-        "annual_savings_usd": round(savings_usd * 365, 2)
+        "cost_savings_percentage": round(cost_savings_percentage, 1),
+        "monthly_savings_kwh": round(savings_kwh * 30, 2),
+        "monthly_savings_usd": round(savings_usd * 30, 2),
+        "annual_savings_kwh": round(savings_kwh * 365, 2),
+        "annual_savings_usd": round(savings_usd * 365, 2),
     }
 
 
