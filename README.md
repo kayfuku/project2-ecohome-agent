@@ -373,4 +373,4 @@ This is a learning project. Feel free to:
 
 ## License
 
-This project is for educational purposes as part of the Udacity Course 2 curriculum.
+This project is for educational purposes as part of the Udacity Course curriculum.
